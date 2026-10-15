@@ -1,0 +1,54 @@
+name: Native iPad build
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "native/**"
+      - ".github/workflows/native-build.yml"
+  pull_request:
+    paths:
+      - "native/**"
+      - ".github/workflows/native-build.yml"
+permissions:
+  contents: read
+concurrency:
+  group: native-build-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  simulator-tests:
+    runs-on: macos-26
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 26.6
+        run: sudo xcode-select --switch /Applications/Xcode_26.6.app/Contents/Developer
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Build and test on iPad simulator
+        run: bash native/scripts/build.sh simulator
+      - name: Upload simulator app and test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-results
+          path: native/build/artifacts/
+          if-no-files-found: ignore
+          retention-days: 1
+  device-package:
+    runs-on: macos-26
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 26.6
+        run: sudo xcode-select --switch /Applications/Xcode_26.6.app/Contents/Developer
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Build arm64 device packages
+        run: bash native/scripts/build.sh device
+      - name: Upload IPAs and requested capabilities
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipad-device-ipa
+          path: native/build/artifacts/
+          if-no-files-found: error
+          retention-days: 1
